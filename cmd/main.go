@@ -9,6 +9,8 @@ import (
 	"log"
 )
 
+const RoutineCount = 10
+
 func main() {
 	fmt.Println(uuid.New().String())
 
@@ -21,8 +23,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err = core.CleanAllProcessIDs(client, ctx); err != nil {
-		log.Fatal(err)
+	count := make(chan int)
+	for i := 0; i < RoutineCount; i++ {
+		lockHolder := core.LockHolder{
+			Client: client,
+			ID: core.NewRandomID(),
+		}
+		go lockHolder.GoLock(ctx, count)
 	}
+
+	for i := 0; i < RoutineCount; {
+		select {
+		case <-count:
+			i++
+		}
+	}
+	log.Println("all done.")
 }
 
